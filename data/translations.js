@@ -1348,6 +1348,33 @@ for (const code of Object.keys(uiExtras)) {
   if (i18n[code]) Object.assign(i18n[code], uiExtras[code]);
 }
 
+const uploadExtras = {
+  'hi': { gallery: 'गैलरी से चुनें', camera: 'कैमरे से खींचें' },
+  'en': { gallery: 'Choose from gallery', camera: 'Take a photo' },
+  'te': { gallery: 'గ్యాలరీ నుండి ఎంచుకోండి', camera: 'కెమెరాతో తీయండి' },
+  'mr': { gallery: 'गॅलरीतून निवडा', camera: 'कॅमेऱ्याने घ्या' },
+  'ta': { gallery: 'கேலரியிலிருந்து தேர்ந்தெடுக்கவும்', camera: 'கேமராவில் படம் எடுக்கவும்' },
+  'bn': { gallery: 'গ্যালারি থেকে নির্বাচন করুন', camera: 'ক্যামেরা দিয়ে ছবি তুলুন' },
+  'gu': { gallery: 'ગેલેરીમાંથી પસંદ કરો', camera: 'કૅમેરાથી લો' },
+  'kn': { gallery: 'ಗ್ಯಾಲರಿಯಿಂದ ಆಯ್ಕೆಮಾಡಿ', camera: 'ಕ್ಯಾಮೆರಾದಿಂದ ತೆಗೆಯಿರಿ' },
+  'ml': { gallery: 'ഗാലറിയിൽ നിന്ന് തിരഞ്ഞെടുക്കുക', camera: 'ക്യാമറ ഉപയോഗിച്ച് എടുക്കുക' },
+  'pa': { gallery: 'ਗੈਲਰੀ ਤੋਂ ਚੁਣੋ', camera: 'ਕੈਮਰੇ ਨਾਲ ਲਵੋ' },
+  'or': { gallery: 'ଗ୍ୟାଲେରୀରୁ ବାଛନ୍ତୁ', camera: 'କ୍ୟାମେରାରେ ଉଠାନ୍ତୁ' },
+  'as': { gallery: 'গেলেৰীৰ পৰা বাছনি কৰক', camera: 'কেমেৰাৰে তোলক' },
+  'ur': { gallery: 'گیلری سے منتخب کریں', camera: 'کیمرے سے کھینچیں' },
+  'sa': { gallery: 'चित्रावलीतः चिनुत', camera: 'चित्रयन्त्रेण गृह्णातु' },
+  'mai': { gallery: 'गैलरी सँ चुनू', camera: 'कैमरा सँ उठाउ' },
+  'sd': { gallery: 'Galari maan choono', camera: 'Camera saan khicho' },
+  'ne': { gallery: 'ग्यालरीबाट छान्नुहोस्', camera: 'क्यामेराले खिच्नुहोस्' },
+  'sat': { gallery: 'अंसी सिने गहर चुनो', camera: 'कैमरा सिने उप्रा' },
+  'ks': { gallery: 'Galarihov patith vanun', camera: 'Camera saanam khithaav' },
+  'bodo': { gallery: 'गैलरी नि थाइ बाछो', camera: 'कैमरा जों नाव खालाम' }
+};
+
+for (const code of Object.keys(uploadExtras)) {
+  if (i18n[code]) Object.assign(i18n[code], uploadExtras[code]);
+}
+
 const languageNames = {
   'hi': 'हिन्दी', 'en': 'English', 'te': 'తెలుగు', 'mr': 'मराठी',
   'ta': 'தமிழ்', 'bn': 'বাংলা', 'gu': 'ગુજરાતી', 'kn': 'ಕನ್ನಡ',

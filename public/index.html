@@ -63,25 +63,25 @@
         <h3 class="category-title" data-i18n="fill_details">Apni shreni chunein</h3>
         <div class="category-grid">
           <button class="category-chip" data-category="kisan" onclick="quickCategory('kisan')">
-            <span>🌾</span><span data-i18n="kisan">Kisan</span>
+            <span class="chip-icon">🌾</span><span data-i18n="kisan">Kisan</span>
           </button>
           <button class="category-chip" data-category="vidyarthi" onclick="quickCategory('vidyarthi')">
-            <span>📚</span><span data-i18n="vidyarthi">Vidyarthi</span>
+            <span class="chip-icon">📚</span><span data-i18n="vidyarthi">Vidyarthi</span>
           </button>
           <button class="category-chip" data-category="rojgar" onclick="quickCategory('rojgar')">
-            <span>💼</span><span data-i18n="rojgar">Rojgar</span>
+            <span class="chip-icon">💼</span><span data-i18n="rojgar">Rojgar</span>
           </button>
           <button class="category-chip" data-category="mahila" onclick="quickCategory('mahila')">
-            <span>👩</span><span data-i18n="mahila">Mahila</span>
+            <span class="chip-icon">👩</span><span data-i18n="mahila">Mahila</span>
           </button>
           <button class="category-chip" data-category="swasthya" onclick="quickCategory('swasthya')">
-            <span>🏥</span><span data-i18n="swasthya">Swasthya</span>
+            <span class="chip-icon">🏥</span><span data-i18n="swasthya">Swasthya</span>
           </button>
           <button class="category-chip" data-category="ghar" onclick="quickCategory('ghar')">
-            <span>🏠</span><span data-i18n="ghar">Ghar</span>
+            <span class="chip-icon">🏠</span><span data-i18n="ghar">Ghar</span>
           </button>
           <button class="category-chip" data-category="arthik_madad" onclick="quickCategory('arthik_madad')">
-            <span>💰</span><span data-i18n="arthik_madad">Arthik Madad</span>
+            <span class="chip-icon">💰</span><span data-i18n="arthik_madad">Arthik Madad</span>
           </button>
         </div>
       </div>
@@ -173,6 +173,16 @@
               <input type="file" id="fileInput" multiple accept="image/*,.pdf" style="display:none" onchange="handleFileUpload(this)">
               <div class="upload-icon">📄</div>
               <p data-i18n="upload_doc">Yahan click karein ya drag karein</p>
+            </div>
+            <div class="upload-actions">
+              <button type="button" class="upload-action" onclick="document.getElementById('fileInputGallery').click()">
+                <span>📁</span><span data-i18n="gallery">Gallery se chunein</span>
+              </button>
+              <input type="file" id="fileInputGallery" multiple accept="image/*,.pdf" style="display:none" onchange="handleFileUpload(this)">
+              <button type="button" class="upload-action ghost" onclick="document.getElementById('fileInputCamera').click()">
+                <span>📷</span><span data-i18n="camera">Camera se kheenche</span>
+              </button>
+              <input type="file" id="fileInputCamera" accept="image/*" capture="environment" style="display:none" onchange="handleFileUpload(this)">
             </div>
             <div id="uploadedFiles" class="uploaded-files"></div>
           </div>

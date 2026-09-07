@@ -85,14 +85,13 @@ The app works fully in demo mode. Judges can experience:
 
 ## Deployment (Vercel compatible)
 
-This is a plain Express app and works on Vercel with minimal config. Create a `vercel.json`:
+This project is Vercel-ready. The Express app lives in `app.js` and is wrapped for Vercel by `api/index.js` (a serverless handler) with `vercel.json` routing all requests to it. Local `npm start` uses `server.js`.
 
-```json
-{
-  "builds": [{ "src": "server.js", "use": "@vercel/node" }],
-  "routes": [{ "src": "/(.*)", "dest": "server.js" }]
-}
 ```
+vercel
+```
+
+The app runs in demo mode automatically (no API keys needed) because `ocrService` falls back to demo whenever `OCR_API_KEY` is unset — `DEMO_MODE=true` only forces it locally. Optional env vars can be set in the Vercel dashboard: `OCR_API_KEY`, `AI_API_KEY`, `DEMO_MODE`.
 
 ## Important Notes
 

@@ -61,6 +61,7 @@ const translations = {
     year: 'साल', apply_now: 'अभी आवेदन करें', view_source: 'स्रोत देखें',
     matches_found: 'मिलान मिला', enter_yr_birth: 'जन्म वर्ष चुनें',
     business: 'व्यवसाय',
+    gallery: 'गैलरी से चुनें', camera: 'कैमरे से खींचें',
     processing_msg: 'आपकी जानकारी के आधार पर योजनाएँ खोज रहे हैं...'
   },
   'en': {
@@ -100,6 +101,7 @@ const translations = {
     year: 'year', apply_now: 'Apply Now', view_source: 'View Source',
     matches_found: 'matches found', enter_yr_birth: 'Select year of birth',
     business: 'Business',
+    gallery: 'Choose from gallery', camera: 'Take a photo',
     processing_msg: 'Finding schemes based on your information...'
   },
   'te': {
