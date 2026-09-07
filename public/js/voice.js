@@ -31,6 +31,26 @@ const FIELD_QUESTIONS = {
   }
 };
 
+// Gentle "here is an example" hint shown only after one failed attempt. Never a loop.
+const FIELD_HINTS = {
+  hi: {
+    occupation: 'जैसे "खेती करता हूँ" या "नौकरी करता हूँ" बोलें।',
+    age: 'जैसे "मेरी उम्र 45 साल है" या सिर्फ "45" बोलें।',
+    income: 'जैसे "सालाना 2 लाख" या "15 हजार महीना" या सिर्फ "12000" बोलें।',
+    gender: 'जैसे "मैं पुरुष हूँ" या "महिला हूँ" बोलें।',
+    category: 'जैसे "मैं OBC हूँ" या "पिछड़ा वर्ग" बोलें।',
+    state: 'जैसे "मध्य प्रदेश" या "उत्तर प्रदेश" बोलें।'
+  },
+  en: {
+    occupation: 'For example say "I farm" or "I have a job".',
+    age: 'For example say "I am 45" or just "45".',
+    income: 'For example say "2 lakh a year" or "15 thousand a month" or just "12000".',
+    gender: 'For example say "I am male" or "I am female".',
+    category: 'For example say "I am OBC" or "backward class".',
+    state: 'For example say "Madhya Pradesh" or "Uttar Pradesh".'
+  }
+};
+
 function voiceOwner() {
   return (isLoggedIn && userSession && userSession.mobileLast4) ? '•' + userSession.mobileLast4 : 'guest';
 }
@@ -97,6 +117,7 @@ function saveVState() {
     intent: voiceSession.intent || null,
     missingFields: voiceSession.missingFields || [],
     utteranceCount: voiceSession.utteranceCount || 0,
+    noParseStreak: voiceSession.noParseStreak || 0,
     at: Date.now()
   };
   try { localStorage.setItem(V_STATE_KEY, JSON.stringify(data)); } catch (e) {}
@@ -146,6 +167,7 @@ function newSession() {
     intent: null,
     missingFields: seed ? computeMissingLocal(seed) : FIELD_ORDER.slice(),
     utteranceCount: 0,
+    noParseStreak: 0,
     sentDirectText: false,
     startedAt: Date.now()
   };
@@ -171,6 +193,7 @@ function initOrResumeVoice() {
       intent: saved.intent || null,
       missingFields: saved.missingFields || computeMissingLocal(saved.extractedProfile),
       utteranceCount: saved.utteranceCount || 0,
+      noParseStreak: saved.noParseStreak || 0,
       sentDirectText: false,
       startedAt: Date.now()
     };
@@ -481,6 +504,13 @@ async function handleUtterance(rawText, isDirect) {
       finalizeAndSearch();
       return;
     }
+    if (decision.action === 'type') {
+      // Gently hand over to typed input instead of repeating the question forever.
+      showTextFallback();
+      setStatus(t('voice_ready'), 'idle');
+      pushMsg('bot', decision.message);
+      return;
+    }
 
     if (voiceSession.utteranceCount >= 2 && !isDirect) {
       pushMsg('bot', t('voice_thinking'));
@@ -495,22 +525,55 @@ async function handleUtterance(rawText, isDirect) {
   }
 }
 
+function formatINR(n) {
+  try { return '₹' + Math.round(Number(n)).toLocaleString('en-IN'); }
+  catch (e) { return '₹' + n; }
+}
+
 function decideNext(data, filledCoreNow, isDirect) {
   const wants = !!data.wantsResults;
   const ready = !!data.ready;
   const missing = voiceSession.missingFields;
   const newlyParsed = Object.keys(data.newlyParsed || {}).filter(k => hasValue(data.newlyParsed[k]));
+  const incomeMeta = data.incomeMeta || {};
 
   if (wants && ready) return { action: 'search' };
   if (missing.length === 0) return { action: 'search' };
   if (!isDirect && voiceSession.utteranceCount >= 2 && filledCoreNow) return { action: 'search' };
   if (voiceSession.utteranceCount >= MAX_TURNS) return { action: 'search' };
 
+  if (newlyParsed.length) {
+    // A field was understood: confirm naturally (income gets a concrete echo),
+    // then move straight to the next open field. Never re-ask the answered field.
+    voiceSession.noParseStreak = 0;
+    const next = missing[0];
+    const parts = [];
+    if (newlyParsed.indexOf('income') !== -1 && hasValue(voiceSession.extractedProfile.income)) {
+      const tag = (incomeMeta.approx || incomeMeta.annualized) ? 'income_confirm_approx' : 'income_confirm';
+      const valueLine = t(tag).replace('{amount}', formatINR(voiceSession.extractedProfile.income));
+      parts.push(t('understood') + ' ' + valueLine);
+    } else {
+      parts.push(t('understood'));
+    }
+    parts.push(fieldQuestion(next));
+    return { action: 'ask', message: parts.join(' ') };
+  }
+
+  // Nothing new was understood. First re-ask gently, then give ONE example hint,
+  // then (never repeating an apology) hand the user the typed box as an out.
+  voiceSession.noParseStreak = (voiceSession.noParseStreak || 0) + 1;
   const next = missing[0];
-  const message = newlyParsed.length
-    ? t('understood') + ' ' + fieldQuestion(next)
-    : t('try_again') + ' ' + fieldQuestion(next);
-  return { action: 'ask', message };
+  const streak = voiceSession.noParseStreak;
+
+  if (streak === 1) {
+    return { action: 'ask', message: t('try_again') + ' ' + fieldQuestion(next) };
+  }
+  if (streak === 2) {
+    const hints = FIELD_HINTS[currentLang] || FIELD_HINTS.en;
+    return { action: 'ask', message: fieldQuestion(next) + ' ' + (hints[next] || hints.income) };
+  }
+  voiceSession.noParseStreak = 0;
+  return { action: 'type', message: t('voice_pivot_typed') };
 }
 
 function finalizeAndSearch() {
