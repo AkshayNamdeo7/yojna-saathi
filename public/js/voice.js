@@ -2,8 +2,10 @@
 // Voice / text entry -> natural language parsing -> only-necessary follow-ups -> existing eligibility flow.
 
 let voiceSession = null;
-let listenLoopActive = false;
+let micBusy = false;
+let micEligible = false;
 let stopRequested = false;
+let reListenTimer = null;
 
 const V_STATE_KEY = 'V_STATE';
 const STALE_MS = 3 * 60 * 1000;
@@ -148,7 +150,11 @@ function newSession() {
     startedAt: Date.now()
   };
   if (seed && Object.keys(seed).length) {
-    pushMsg('bot', t('understood') + ' ' + (t('need_more_information') + ' ' + fieldQuestion(voiceSession.missingFields[0])));
+    if (voiceSession.missingFields.length) {
+      pushMsg('bot', t('understood') + ' ' + (t('need_more_information') + ' ' + fieldQuestion(voiceSession.missingFields[0])));
+    } else {
+      pushMsg('bot', t('voice_profile_ready'));
+    }
   } else {
     pushMsg('bot', t('need_more_information') + ' ' + fieldQuestion(voiceSession.missingFields[0]));
   }
@@ -177,8 +183,9 @@ function initOrResumeVoice() {
 
 function endVoiceSession() {
   stopRequested = true;
+  if (reListenTimer) { clearTimeout(reListenTimer); reListenTimer = null; }
   if (recognition) { try { recognition.onend = null; recognition.stop(); } catch (e) {} recognition = null; }
-  listenLoopActive = false;
+  micBusy = false;
   if (voiceSession) voiceSession.active = false;
   clearVState();
   closeVoiceModal();
@@ -253,7 +260,17 @@ function openVoice() {
   document.body.style.overflow = 'hidden';
   const input = document.getElementById('voiceTextInput');
   if (input) input.value = '';
-  startListenLoop();
+  renderTranscript();
+  micEligible = !!speechAvailable();
+  hideTextFallback();
+  if (micEligible) {
+    setStatus(t('voice_ready'), 'idle');
+    startListening();
+  } else {
+    setStatus(t('voice_unavailable') + ' ' + t('type_instead'), 'error');
+    setMicListening(false);
+    showTextFallback();
+  }
 }
 
 function closeVoiceModal() {
@@ -262,7 +279,10 @@ function closeVoiceModal() {
   modal.style.display = 'none';
   document.body.style.overflow = '';
   stopRequested = true;
+  if (reListenTimer) { clearTimeout(reListenTimer); reListenTimer = null; }
   if (recognition) { try { recognition.stop(); } catch (e) {} }
+  micBusy = false;
+  setMicListening(false);
   if (voiceSession && voiceSession.active) setStatus('', '');
   saveVState();
 }
@@ -284,12 +304,13 @@ function cancelVoice() {
   if (wasActive) showToast(t('cancel'));
 }
 
-// ---------- SpeechRecognition ----------
+// ---------- SpeechRecognition (single-shot, user-gesture friendly) ----------
 
 function stopVoiceListening() {
   stopRequested = true;
   if (recognition) { try { recognition.stop(); } catch (e) {} }
-  listenLoopActive = false;
+  micBusy = false;
+  setMicListening(false);
 }
 
 function listenOnce() {
@@ -317,62 +338,108 @@ function listenOnce() {
   });
 }
 
-async function startListenLoop() {
+// One-shot listen: start the mic, capture ONE utterance, then stop and wait.
+// No tight loop, no rapid re-start (root cause of the mobile Chrome stall).
+function startListening() {
   if (!voiceSession || !voiceSession.active) return;
-  if (listenLoopActive && !stopRequested) return;
-  if (!speechAvailable()) {
+  if (micBusy || stopRequested) return;
+  if (!speechAvailable() || !micEligible) {
     setStatus(t('voice_unavailable') + ' ' + t('type_instead'), 'error');
-    updateVoiceMicButton(false);
+    setMicListening(false);
+    showTextFallback();
     return;
   }
-  listenLoopActive = true;
+  micBusy = true;
   stopRequested = false;
-  updateVoiceMicButton(true);
-  while (voiceSession && voiceSession.active && !stopRequested) {
-    setStatus(t('listening'), 'listening');
-    try {
-      const { text } = await listenOnce();
-      if (!text) continue;
-      await handleUtterance(text, false);
-      if (!voiceSession || !voiceSession.active) break;
-    } catch (err) {
-      const code = err.message;
-      if (code === 'not-allowed' || code === 'service-not-allowed') {
-        setStatus(t('microphone_denied'), 'error');
-      } else if (code === 'unavailable') {
-        setStatus(t('voice_unavailable') + ' ' + t('type_instead'), 'error');
-      } else {
-        setStatus(t('voice_error'), 'error');
-      }
-      break;
+  setMicListening(true);
+  setStatus(t('voice_listening'), 'listening');
+  listenOnce().then(({ text }) => {
+    micBusy = false;
+    setMicListening(false);
+    if (!voiceSession || !voiceSession.active || stopRequested) { setStatus('', ''); return; }
+    if (!text) {
+      setStatus(t('voice_no_speech'), 'idle');
+      return;
     }
-  }
-  listenLoopActive = false;
-  updateVoiceMicButton(false);
-  if (voiceSession && voiceSession.active && !stopRequested) {
-    setStatus(t('speaking'), 'idle');
-  } else {
-    setStatus('', '');
-  }
+    handleUtterance(text, false);
+  }).catch((err) => {
+    micBusy = false;
+    setMicListening(false);
+    if (!voiceSession || !voiceSession.active || stopRequested) { setStatus('', ''); return; }
+    const code = String(err.message || '');
+    if (code === 'not-allowed' || code === 'service-not-allowed') {
+      micEligible = false;
+      setStatus(t('microphone_denied'), 'error');
+      showTextFallback();
+    } else if (code === 'no-speech') {
+      setStatus(t('voice_no_speech'), 'idle');
+    } else if (code === 'audio-capture' || code === 'network' || code === 'unavailable' || code === 'start_error') {
+      micEligible = false;
+      setStatus(t('voice_mic_error'), 'error');
+      showTextFallback();
+    } else {
+      setStatus(t('voice_error'), 'error');
+      showTextFallback();
+    }
+  });
 }
 
-function updateVoiceMicButton(listening) {
-  const btn = document.getElementById('voiceMicToggle');
+// Re-arm the mic once after the bot's reply so the conversation keeps flowing
+// hands-free, but with a guarded delay (no tight loop into a new start()).
+function scheduleReListen() {
+  if (reListenTimer) { clearTimeout(reListenTimer); reListenTimer = null; }
+  if (!voiceSession || !voiceSession.active || !micEligible) return;
+  setStatus(t('voice_ready'), 'idle');
+  reListenTimer = setTimeout(() => {
+    reListenTimer = null;
+    if (voiceSession && voiceSession.active && !stopRequested) startListening();
+  }, 900);
+}
+
+function setMicListening(listening) {
+  const btn = document.getElementById('voiceMicBtn');
   if (!btn) return;
-  btn.textContent = listening ? t('stop_listening') : t('speaking');
-  btn.classList.toggle('btn-primary', !listening);
-  btn.classList.toggle('btn-ghost', listening);
+  btn.classList.toggle('listening', !!listening);
+  btn.setAttribute('aria-pressed', String(!!listening));
+  const label = document.getElementById('voiceMicLabel');
+  if (label) label.textContent = listening ? t('stop_listening') : t('voice_mic');
 }
 
 function toggleVoiceListening() {
-  if (listenLoopActive && !stopRequested) {
+  if (micBusy && !stopRequested) {
     stopRequested = true;
     if (recognition) { try { recognition.stop(); } catch (e) {} }
-    setStatus(t('speaking'), 'idle');
-    updateVoiceMicButton(false);
+    micBusy = false;
+    setMicListening(false);
+    setStatus(t('voice_ready'), 'idle');
   } else {
-    startListenLoop();
+    startListening();
   }
+}
+
+function toggleVoiceText() {
+  const row = document.getElementById('voiceTextRow');
+  if (!row) return;
+  const show = row.style.display === 'none';
+  row.style.display = show ? 'flex' : 'none';
+  if (show) {
+    const input = document.getElementById('voiceTextInput');
+    if (input) { try { input.focus(); } catch (e) {} }
+  }
+}
+
+function showTextFallback() {
+  const row = document.getElementById('voiceTextRow');
+  if (row) row.style.display = 'flex';
+  const btn = document.getElementById('voiceMicBtn');
+  if (btn) btn.classList.add('disabled');
+}
+
+function hideTextFallback() {
+  const row = document.getElementById('voiceTextRow');
+  if (row && !(row.style.display === 'flex' && !micEligible)) row.style.display = 'none';
+  const btn = document.getElementById('voiceMicBtn');
+  if (btn) btn.classList.remove('disabled');
 }
 
 // ---------- Conversation ----------
@@ -420,11 +487,11 @@ async function handleUtterance(rawText, isDirect) {
       await sleep(450);
     }
     pushMsg('bot', decision.message);
-    setStatus(t('speaking'), 'idle');
+    scheduleReListen();
   } catch (err) {
     setTyping(false);
     pushMsg('bot', t('voice_error'));
-    setStatus(t('speaking'), 'idle');
+    scheduleReListen();
   }
 }
 
@@ -464,10 +531,6 @@ async function sendVoiceText() {
   stopVoiceListening();
   setStatus('', '');
   await handleUtterance(text, true);
-  if (voiceSession && voiceSession.active) {
-    stopRequested = false;
-    startListenLoop();
-  }
 }
 
 // ---------- Transition to existing eligibility flow ----------

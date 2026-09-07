@@ -58,8 +58,10 @@ function extractProfile(lower) {
   if (age !== null) parsed.age = Math.min(120, age);
 
   let income = null;
-  const im1 = lower.match(/(\d+)\s*(?:lakh|लाख)\b/);
-  const im2 = lower.match(/(\d+)\s*(?:hazaar|hajar|thousand|हज़ार|हजार)\b/);
+  // note: \b is ASCII-only (Devanagari is not \w), so use a "not followed by non-space"
+  // boundary instead so "3 lakh" AND "3 लाख" both parse.
+  const im1 = lower.match(/(\d+)\s*(?:lakh|लाख)(?!\S)/);
+  const im2 = lower.match(/(\d+)\s*(?:hazaar|hajar|thousand|हज़ार|हजार)(?!\S)/);
   if (im1) income = parseInt(im1[1], 10) * 100000;
   else if (im2) income = parseInt(im2[1], 10) * 1000;
   else {

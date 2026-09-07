@@ -321,28 +321,32 @@
     <div id="voiceModal" class="modal" style="display:none" onclick="closeVoiceModalBackdrop(event)">
       <div class="modal-content voice-content" onclick="event.stopPropagation()">
         <div class="modal-header">
-          <h3 data-i18n="voice_title">Bolkar poochhen</h3>
-          <div class="voice-status" id="voiceStatus" style="display:none">
-            <span class="voice-status-dot" id="voiceStatusDot"></span>
-            <span id="voiceStatusText">Listening...</span>
-          </div>
+          <h3 data-i18n="voice_title">बोलकर पूछें</h3>
           <button class="icon-btn" type="button" onclick="closeVoiceModal()" aria-label="Close" title="Close">✕</button>
         </div>
         <div class="modal-body">
-          <p class="voice-note" data-i18n="voice_instruction">Boliye ya niche likhkare bejhein.</p>
+          <p class="voice-note" data-i18n="voice_instruction">Mic दबाकर अपनी बात बताइए</p>
+          <div class="voice-mic-wrap">
+            <button type="button" id="voiceMicBtn" class="voice-mic-btn" onclick="toggleVoiceListening()" aria-label="Mic" aria-pressed="false" title="Mic">
+              <span class="voice-mic-icon">🎤</span>
+            </button>
+            <span class="voice-mic-label" id="voiceMicLabel" data-i18n="voice_mic">माइक</span>
+            <div id="voiceStatus" class="voice-status" role="status">
+              <span class="voice-status-dot" id="voiceStatusDot"></span>
+              <span id="voiceStatusText"></span>
+            </div>
+          </div>
           <div class="voice-transcript" id="voiceTranscript" aria-live="polite"></div>
-          <div class="voice-input-row">
+          <div class="voice-input-row" id="voiceTextRow" style="display:none">
             <input type="text" id="voiceTextInput" class="form-control" maxlength="300" autocomplete="off"
                    data-i18n-placeholder="voice_placeholder" onkeydown="if(event.key==='Enter')sendVoiceText()">
-            <button type="button" class="voice-send-btn" onclick="sendVoiceText()" data-i18n="send">Bhejen</button>
+            <button type="button" class="voice-send-btn" onclick="sendVoiceText()" data-i18n="send">भेजें</button>
           </div>
           <div class="voice-actions">
-            <button type="button" class="btn btn-ghost voice-action-btn" id="voiceMicToggle" onclick="toggleVoiceListening()" data-i18n="stop_listening">Sunna band karein</button>
-            <button type="button" class="btn btn-ghost voice-action-btn" onclick="openDocModal()">
-              <span data-i18n="add_document">दस्तावेज़ जोड़ें</span>
-            </button>
-            <button type="button" class="btn btn-primary voice-action-btn" onclick="fillAndSearch()" data-i18n="searching_for_schemes">Yojnayein dikhayen</button>
-            <button type="button" class="btn btn-ghost voice-action-btn" onclick="cancelVoice()" data-i18n="cancel">Radd karein</button>
+            <button type="button" class="btn btn-primary voice-action-btn" onclick="fillAndSearch()" data-i18n="searching_for_schemes">योजनाएँ दिखाएं</button>
+            <button type="button" class="btn btn-ghost voice-action-btn" onclick="openDocModal()" data-i18n="add_document">दस्तावेज़ जोड़ें</button>
+            <button type="button" class="btn btn-ghost voice-action-btn" onclick="toggleVoiceText()" data-i18n="voice_type_toggle">लिखकर बताएं</button>
+            <button type="button" class="btn btn-ghost voice-action-btn" onclick="cancelVoice()" data-i18n="cancel">रद्द करें</button>
           </div>
         </div>
       </div>
