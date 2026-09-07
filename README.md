@@ -85,13 +85,13 @@ The app works fully in demo mode. Judges can experience:
 
 ## Deployment (Vercel compatible)
 
-This project is Vercel-ready. The Express app lives in `app.js` and is wrapped for Vercel by `api/index.js` (a serverless handler) with `vercel.json` routing all requests to it. Local `npm start` uses `server.js`.
+This project uses Vercel's zero-configuration Express support. `server.js` at the project root exports the Express app (a single Vercel Function) and listens locally only when run directly (`npm start`). Static assets in `public/**` are served by Vercel's CDN, and a minimal rewrite in `vercel.json` serves `/` from `public/index.html`. All `/api/*` routes are handled by the Express Function automatically — no `/api` folder or legacy `builds` config is used.
 
 ```
 vercel
 ```
 
-The app runs in demo mode automatically (no API keys needed) because `ocrService` falls back to demo whenever `OCR_API_KEY` is unset — `DEMO_MODE=true` only forces it locally. Optional env vars can be set in the Vercel dashboard: `OCR_API_KEY`, `AI_API_KEY`, `DEMO_MODE`.
+The app runs in demo mode automatically (no API keys needed) because `ocrService` falls back to demo whenever `OCR_API_KEY` is unset — `DEMO_MODE=true` only forces it locally. Optional env vars can be set in the Vercel dashboard: `OCR_API_KEY`, `AI_API_KEY`, `DEMO_MODE`. Note `express.static()` is ignored on Vercel, so static files must live in `public/**`.
 
 ## Important Notes
 
