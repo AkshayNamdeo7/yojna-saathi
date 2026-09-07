@@ -75,8 +75,8 @@ const schemes = [
       conditions: ["Gramin kshetra mein rehne wale", "Kabja rakhne wale"]
     },
     requiredDocuments: ["aadhaar", "land_records"],
-    officialApplicationUrl: "https://svamitva.uplineda.in/",
-    officialSourceUrl: "https://svamitva.uplineda.in/",
+    officialApplicationUrl: "https://svamitva.nic.in/svamitva/",
+    officialSourceUrl: "https://svamitva.nic.in/svamitva/",
     status: "active",
     lastVerified: "2026-09-01",
     lastUpdated: "2026-09-01"
@@ -191,7 +191,7 @@ const schemes = [
       conditions: ["Beti ki umra 10 saal se kam honi chahiye", "Account beti ke naam par hona chahiye"]
     },
     requiredDocuments: ["aadhaar", "birth_certificate", "bank_account_details"],
-    officialApplicationUrl: "https://www.nvshq.gov.in/sukanya-samriddhi-yojana.html",
+    officialApplicationUrl: "https://www.indiapost.gov.in/banking-services/savings",
     officialSourceUrl: "https://bbpp.nic.in/",
     status: "active",
     lastVerified: "2026-09-01",
@@ -213,8 +213,8 @@ const schemes = [
       conditions: ["Small and marginal farmer", "18-40 years old"]
     },
     requiredDocuments: ["aadhaar", "land_records", "bank_account_details"],
-    officialApplicationUrl: "https://maandhan.in/",
-    officialSourceUrl: "https://maandhan.in/",
+    officialApplicationUrl: "https://pmkmy.gov.in/",
+    officialSourceUrl: "https://pmkmy.gov.in/",
     status: "active",
     lastVerified: "2026-09-01",
     lastUpdated: "2026-09-01"
@@ -233,7 +233,7 @@ const schemes = [
       conditions: ["Unorganized sector worker", "No other pension scheme"]
     },
     requiredDocuments: ["aadhaar", "bank_account_details"],
-    officialApplicationUrl: "https://www.jeevanssaathi.in/",
+    officialApplicationUrl: "https://www.npscra.nsdl.co.in/apy.php",
     officialSourceUrl: "https://www.npscra.nsdl.co.in/apy.php",
     status: "active",
     lastVerified: "2026-09-01",
@@ -292,8 +292,8 @@ const schemes = [
       conditions: ["Travel from/to underserved airports"]
     },
     requiredDocuments: ["aadhaar"],
-    officialApplicationUrl: "https://udyogjyoti.nic.in/",
-    officialSourceUrl: "https://udyogjyoti.nic.in/",
+    officialApplicationUrl: "https://www.civilaviation.gov.in/udan-rcs/udan-rcs",
+    officialSourceUrl: "https://www.civilaviation.gov.in/udan-rcs/udan-rcs",
     status: "active",
     lastVerified: "2026-09-01",
     lastUpdated: "2026-09-01"
@@ -351,8 +351,8 @@ const schemes = [
       conditions: ["Beti ki umra 10 saal se kam", "Hindu undivided family"]
     },
     requiredDocuments: ["aadhaar", "birth_certificate", "bank_account_details"],
-    officialApplicationUrl: "https://www.nvshq.gov.in/sukanya-samriddhi-yojana.html",
-    officialSourceUrl: "https://www.nvshq.gov.in/sukanya-samriddhi-yojana.html",
+    officialApplicationUrl: "https://www.indiapost.gov.in/banking-services/savings",
+    officialSourceUrl: "https://www.indiapost.gov.in/banking-services/savings",
     status: "active",
     lastVerified: "2026-09-01",
     lastUpdated: "2026-09-01"
@@ -508,8 +508,8 @@ const schemes = [
       conditions: ["Bank account holder", "₹436 pratyek varsh premium"]
     },
     requiredDocuments: ["aadhaar", "bank_account_details"],
-    officialApplicationUrl: "https://www.jeevanssaathi.in/",
-    officialSourceUrl: "https://www.jeevanssaathi.in/",
+    officialApplicationUrl: "https://www.financialservices.gov.in/pradhan-mantri-jeevan-jyoti-bima-yojana-pmjjby",
+    officialSourceUrl: "https://www.financialservices.gov.in/pradhan-mantri-jeevan-jyoti-bima-yojana-pmjjby",
     status: "active",
     lastVerified: "2026-09-01",
     lastUpdated: "2026-09-01"
@@ -528,8 +528,8 @@ const schemes = [
       conditions: ["Bank account holder", "₹20 pratyek varsh premium"]
     },
     requiredDocuments: ["aadhaar", "bank_account_details"],
-    officialApplicationUrl: "https://www.jeevanssaathi.in/",
-    officialSourceUrl: "https://www.jeevanssaathi.in/",
+    officialApplicationUrl: "https://www.financialservices.gov.in/pradhan-mantri-suraksha-bima-yojana-pmsby",
+    officialSourceUrl: "https://www.financialservices.gov.in/pradhan-mantri-suraksha-bima-yojana-pmsby",
     status: "active",
     lastVerified: "2026-09-01",
     lastUpdated: "2026-09-01"

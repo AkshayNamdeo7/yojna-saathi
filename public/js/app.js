@@ -1,6 +1,10 @@
 let userProfile = {};
 let allSchemesData = [];
-let uploadedDocs = [];
+let requestedSchemeId = null;
+
+let isLoggedIn = false;
+let userSession = null;
+const DEMO_OTP = '123456';
 
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
@@ -8,21 +12,286 @@ document.addEventListener('DOMContentLoaded', () => {
   populateBirthYears();
   populateStatesFilter();
   applyTranslations();
-  wireHeaderButtons();
+  initLoginState();
+  refreshGuestChip();
   loadServerTranslations(currentLang).then(() => {
     applyTranslations();
     updateOccupationOptions();
     buildLanguageGrids();
+    renderLoginState();
   });
 });
 
-function wireHeaderButtons() {
-  const langBtn = document.getElementById('langBtn');
-  if (langBtn) langBtn.onclick = () => { document.getElementById('langModal').style.display = 'flex'; };
+function openLangModal() {
+  const modal = document.getElementById('langModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-label', t('apni_bhasha'));
+  document.body.style.overflow = 'hidden';
+  const closeBtn = modal.querySelector('.modal-header .icon-btn');
+  if (closeBtn) closeBtn.focus();
 }
 
-function openLangModal() {
-  document.getElementById('langModal').style.display = 'flex';
+function closeLangModal() {
+  const modal = document.getElementById('langModal');
+  if (!modal) return;
+  modal.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function modalIsOpen(id) {
+  const el = document.getElementById(id);
+  return el && el.style.display === 'flex';
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (modalIsOpen('loginModal')) closeLoginModal();
+  else if (modalIsOpen('profileModal')) closeProfileModal();
+  else closeLangModal();
+});
+
+// ---------- Login / session state ----------
+
+function initLoginState() {
+  isLoggedIn = false;
+  userSession = null;
+  try {
+    const raw = localStorage.getItem('yojna_user');
+    if (raw) {
+      const data = JSON.parse(raw);
+      if (data && data.mobileLast4) {
+        isLoggedIn = true;
+        userSession = { login: 'demo-otp', mobileLast4: data.mobileLast4 };
+      }
+    }
+  } catch (e) {
+    isLoggedIn = false;
+    userSession = null;
+  }
+  renderLoginState();
+}
+
+function renderLoginState() {
+  const buttons = document.querySelectorAll('[data-login]');
+  buttons.forEach(btn => {
+    if (isLoggedIn) {
+      btn.textContent = '👤 ' + (userSession ? '•' + userSession.mobileLast4 : '');
+      btn.classList.add('logged-in');
+      btn.setAttribute('aria-label', t('profile'));
+      btn.title = t('profile');
+      btn.onclick = () => openProfileModal();
+    } else {
+      btn.textContent = t('login');
+      btn.classList.remove('logged-in');
+      btn.setAttribute('aria-label', t('login'));
+      btn.title = t('login');
+      btn.onclick = () => openLoginModal();
+    }
+  });
+}
+
+function refreshGuestChip() {
+  const chip = document.getElementById('guestChip');
+  if (!chip) return;
+  chip.style.display = isLoggedIn ? 'none' : 'inline-block';
+}
+
+function updateVoiceHeaderButton(show) {
+  const btn = document.getElementById('voiceQuickBtn');
+  if (!btn) return;
+  const visible = show !== undefined
+    ? !!show
+    : (typeof window.voiceActive === 'function' && window.voiceActive());
+  btn.style.display = visible ? 'flex' : 'none';
+  if (visible) {
+    btn.setAttribute('aria-label', t('voice_title'));
+    btn.title = t('voice_title');
+  }
+}
+
+function openLoginModal() {
+  const modal = document.getElementById('loginModal');
+  if (!modal) return;
+  showModalStep('loginStep1');
+  clearLoginInputs();
+  modal.style.display = 'flex';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-label', t('optional_login'));
+  document.body.style.overflow = 'hidden';
+  const mobile = document.getElementById('loginMobile');
+  if (mobile) mobile.focus();
+}
+
+function closeLoginModal() {
+  const modal = document.getElementById('loginModal');
+  if (!modal) return;
+  modal.style.display = 'none';
+  document.body.style.overflow = '';
+  clearLoginInputs();
+}
+
+function closeLoginModalBackdrop(e) {
+  if (e.target === document.getElementById('loginModal')) closeLoginModal();
+}
+
+function showModalStep(stepId) {
+  document.getElementById('loginStep1').style.display = 'none';
+  document.getElementById('loginStep2').style.display = 'none';
+  document.getElementById(stepId).style.display = 'block';
+}
+
+function clearLoginInputs() {
+  const mobile = document.getElementById('loginMobile');
+  const otp = document.getElementById('loginOtp');
+  if (mobile) mobile.value = '';
+  if (otp) otp.value = '';
+  showModalStep('loginStep1');
+}
+
+function submitMobile() {
+  const mobile = document.getElementById('loginMobile');
+  const value = (mobile.value || '').replace(/\D/g, '');
+  if (!/^[6-9]\d{9}$/.test(value)) {
+    showToast(t('invalid_mobile'));
+    mobile.focus();
+    return;
+  }
+  showModalStep('loginStep2');
+  const otp = document.getElementById('loginOtp');
+  if (otp) otp.focus();
+}
+
+function verifyOtp() {
+  const otp = document.getElementById('loginOtp');
+  const otpValue = (otp.value || '').replace(/\D/g, '');
+  if (otpValue !== DEMO_OTP) {
+    showToast(t('invalid_otp'));
+    otp.focus();
+    return;
+  }
+  const mobile = document.getElementById('loginMobile');
+  const mobileLast4 = (mobile.value || '').slice(-4);
+  isLoggedIn = true;
+  userSession = { login: 'demo-otp', mobileLast4 };
+  try {
+    localStorage.setItem('yojna_user', JSON.stringify({ login: 'demo-otp', mobileLast4, at: Date.now() }));
+    const profile = readLocalProfile();
+    if (profile) {
+      localStorage.setItem('yojna_profile', JSON.stringify({ ...profile, owner: mobileLast4 }));
+    }
+  } catch (e) {}
+  showToast(t('login_success'));
+  closeLoginModal();
+  renderLoginState();
+  refreshGuestChip();
+}
+
+function backToMobileStep() {
+  showModalStep('loginStep1');
+  const mobile = document.getElementById('loginMobile');
+  if (mobile) mobile.focus();
+}
+
+function openProfileModal() {
+  const modal = document.getElementById('profileModal');
+  if (!modal) return;
+  const mobileText = document.getElementById('profileMobileText');
+  if (mobileText) mobileText.textContent = userSession ? '+91 •••••• ' + userSession.mobileLast4 : '—';
+
+  const profile = readLocalProfile();
+  const guestBlock = document.getElementById('profileGuestBlock');
+  const guestText = document.getElementById('profileGuestText');
+  if (profile && profile.yearOfBirth) {
+    if (guestBlock) guestBlock.style.display = '';
+    if (guestText) guestText.textContent = formatProfileSummary(profile);
+  } else if (guestBlock) {
+    guestBlock.style.display = 'none';
+  }
+
+  const searchText = document.getElementById('profileSearchText');
+  const lastSearch = readLocalSearch();
+  if (lastSearch && lastSearch.at) {
+    const date = new Date(lastSearch.at).toLocaleDateString(currentLang === 'en' ? 'en-IN' : currentLang, { day: 'numeric', month: 'short' });
+    searchText.textContent = `${date} — ${lastSearch.total} ${t('schemes_found')}`;
+  }
+
+  modal.style.display = 'flex';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-label', t('profile'));
+  document.body.style.overflow = 'hidden';
+}
+
+function closeProfileModal() {
+  const modal = document.getElementById('profileModal');
+  if (!modal) return;
+  modal.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function closeProfileModalBackdrop(e) {
+  if (e.target === document.getElementById('profileModal')) closeProfileModal();
+}
+
+function logout() {
+  isLoggedIn = false;
+  userSession = null;
+  try {
+    localStorage.removeItem('yojna_user');
+  } catch (e) {}
+  closeProfileModal();
+  renderLoginState();
+  refreshGuestChip();
+  showToast(t('logged_out'));
+}
+
+// ---------- Temporary local profile (guest session) ----------
+
+function readLocalProfile() {
+  try {
+    const raw = localStorage.getItem('yojna_profile');
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+
+function readLocalSearch() {
+  try {
+    const raw = localStorage.getItem('yojna_last_search');
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+
+function saveLocalProfile(profile) {
+  try {
+    localStorage.setItem('yojna_profile', JSON.stringify({ ...profile, updatedAt: Date.now(), owner: isLoggedIn && userSession ? userSession.mobileLast4 : null }));
+  } catch (e) {}
+}
+
+function saveLocalSearch(profile, total) {
+  try {
+    localStorage.setItem('yojna_last_search', JSON.stringify({ profile, total, at: Date.now() }));
+  } catch (e) {}
+}
+
+function formatProfileSummary(profile) {
+  const parts = [];
+  if (profile.yearOfBirth) parts.push(`${profile.yearOfBirth} (${new Date().getFullYear() - parseInt(profile.yearOfBirth, 10)} ${t('years')})`);
+  if (profile.gender) parts.push(t(profile.gender));
+  if (profile.state) parts.push(profile.state);
+  if (profile.occupation) {
+    const m = {
+      kisan: t('kisan'), student: t('vidyarthi'), naukri: t('rojgar'),
+      vyavasaya: t('business'), mazdoor: 'Mazdoor', retired: 'Retired', other: 'Other'
+    };
+    parts.push(m[profile.occupation] || profile.occupation);
+  }
+  if (profile.income) parts.push('₹' + profile.income);
+  if (profile.category) parts.push(profile.category.toUpperCase());
+  return parts.length ? parts.join(', ') : t('no_saved_search');
 }
 
 function showScreen(id) {
@@ -68,7 +337,7 @@ function toggleTheme() {
 }
 
 function updateThemeIcon(theme) {
-  document.querySelectorAll('#themeBtn, #themeBtn2').forEach(btn => {
+  document.querySelectorAll('[id^="themeBtn"]').forEach(btn => {
     if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
   });
 }
@@ -115,66 +384,27 @@ function populateStatesFilter() {
 // Language modal
 function closeModal(e) {
   if (e.target === document.getElementById('langModal')) {
-    document.getElementById('langModal').style.display = 'none';
+    closeLangModal();
   }
 }
 
-// Document upload
-function handleFileUpload(input) {
-  const files = Array.from(input.files);
-  files.forEach(file => {
-    const doc = { name: file.name, size: file.size, type: file.type, file, status: 'uploaded' };
-    uploadedDocs.push(doc);
-    uploadDocument(doc, uploadedDocs.length - 1);
+// Document upload (moved to documents.js)
+
+// Attach non-sensitive document evidence to the profile for this session.
+// Sensitive fields (aadhaar, address, dob) are used in-session but never persisted.
+function attachDocEvidence(profile) {
+  if (typeof docUploadedDocs === 'undefined' || !Array.isArray(docUploadedDocs)) return profile;
+  if (docUploadedDocs.length === 0) return profile;
+  const list = docUploadedDocs.map(d => {
+    const evidence = {};
+    Object.keys(d.extracted || {}).forEach(k => {
+      if (k === 'aadhaar' || k === 'address' || k === 'dob' || k === 'district') return;
+      if (d.extracted[k] !== null && d.extracted[k] !== undefined && d.extracted[k] !== '') evidence[k] = d.extracted[k];
+    });
+    return { type: d.type, status: d.status, demo: !!d.demo, fields: evidence };
   });
-  renderUploadedFiles();
-  input.value = '';
-}
-
-function renderUploadedFiles() {
-  const container = document.getElementById('uploadedFiles');
-  if (!container) return;
-  container.innerHTML = uploadedDocs.map((doc, i) => `
-    <div class="file-item">
-      <span>📄</span>
-      <span class="file-name">${doc.name}</span>
-      <span class="file-status">${doc.status === 'processed' ? '✓' : doc.status === 'error' ? '✗' : '...'}</span>
-      <span class="file-remove" onclick="removeFile(${i})">✕</span>
-    </div>
-  `).join('');
-}
-
-function removeFile(i) {
-  uploadedDocs.splice(i, 1);
-  renderUploadedFiles();
-}
-
-async function uploadDocument(doc, index) {
-  try {
-    const formData = new FormData();
-    formData.append('document', doc.file);
-    const res = await fetch('/api/upload', { method: 'POST', body: formData });
-    const data = await res.json();
-    if (data.demo) {
-      uploadedDocs[index].status = 'processed';
-      uploadedDocs[index].extracted = data.extractedFields;
-    } else if (data.extractedFields) {
-      uploadedDocs[index].status = 'processed';
-      uploadedDocs[index].extracted = data.extractedFields;
-      mergeDocumentData(data.extractedFields);
-    } else {
-      uploadedDocs[index].status = 'error';
-    }
-  } catch (err) {
-    uploadedDocs[index].status = 'processed';
-  }
-  renderUploadedFiles();
-}
-
-function mergeDocumentData(fields) {
-  if (fields.gender && !userProfile.gender) userProfile.gender = fields.gender;
-  if (fields.income && !userProfile.income) userProfile.income = fields.income;
-  if (fields.category && !userProfile.category) userProfile.category = fields.category;
+  profile.documents = list;
+  return profile;
 }
 
 // Voice input
@@ -241,6 +471,7 @@ async function processVoiceText(text) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text })
     });
+    if (!res.ok) throw new Error('voice_failed');
     const profile = await res.json();
     if (profile.age) {
       const sel = document.getElementById('profileAge');
@@ -290,18 +521,28 @@ async function submitProfile() {
     income: income || null,
     category: category || null
   };
+  if (requestedSchemeId) userProfile.requestedId = requestedSchemeId;
+  attachDocEvidence(userProfile);
+  saveLocalProfile(userProfile);
 
   showScreen('screen-processing');
   document.querySelector('.processing-sub').textContent = t('processing_msg');
 
   try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20000);
     const res = await fetch('/api/eligibility', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userProfile)
+      body: JSON.stringify(userProfile),
+      signal: controller.signal
     });
-    const results = await res.json();
-    renderResults(results);
+    clearTimeout(timer);
+    if (!res.ok) throw new Error('eligibility_failed');
+    const data = await res.json();
+    const results = Array.isArray(data) ? data : data.results;
+    saveLocalSearch(userProfile, results.length);
+    renderResults(data);
     setTimeout(() => showScreen('screen-results'), 800);
   } catch (err) {
     showToast(t('kuch_dikkat'));
@@ -309,16 +550,20 @@ async function submitProfile() {
   }
 }
 
-// Render results
-function renderResults(results) {
-  const eligible = results.filter(r => r.eligible);
-  const notEligible = results.filter(r => !r.eligible);
-  const total = results.length;
+// Render results (three states: eligible / more_info_needed / not_eligible) + alternatives
+function renderResults(data) {
+  const arr = Array.isArray(data) ? data : (data && data.results) || [];
+  const meta = (Array.isArray(data) ? null : data) || null;
+  const eligible = arr.filter(r => r.status === 'eligible');
+  const moreInfo = arr.filter(r => r.status === 'more_info_needed');
+  const notEligible = arr.filter(r => r.status === 'not_eligible');
+  const total = arr.length;
 
   const summary = document.getElementById('resultsSummary');
-  if (eligible.length > 0) {
+  if (eligible.length > 0 || moreInfo.length > 0) {
     summary.className = 'results-summary eligible';
-    summary.innerHTML = `${eligible.length} ${t('eligible_count')} | ${notEligible.length} ${t('not_eligible_count')} | ${total} ${t('total_schemes')}`;
+    const parts = [`${eligible.length} ${t('eligible_count')}`, `${moreInfo.length} ${t('more_info_needed')}`, `${notEligible.length} ${t('not_eligible_count')}`, `${total} ${t('total_schemes')}`];
+    summary.innerHTML = parts.join(' | ');
   } else {
     summary.className = 'results-summary none';
     summary.innerHTML = `${t('no_schemes_found')} (${total} total)`;
@@ -327,29 +572,72 @@ function renderResults(results) {
   const list = document.getElementById('resultsList');
   let html = '';
 
+  // Requested scheme + alternatives (eligible FIRST, alternatives prominent)
+  if (meta && meta.requested) {
+    html += `<h3 class="results-section-title focus">🔍 ${meta.requested.scheme.name}</h3>`;
+    html += schemeCard(meta.requested, true);
+    if (meta.requested.status !== 'eligible' && meta.alternatives && meta.alternatives.length > 0) {
+      html += `<div class="alternatives-panel">`;
+      html += `<h3 class="results-section-title alt-title">${t('alternatives')}</h3>`;
+      meta.alternatives.forEach(a => { html += alternativeCard(a); });
+      html += `</div>`;
+    } else if (meta.requested.status !== 'eligible') {
+      html += noDeadEndHint();
+    }
+    list.innerHTML = html;
+    return;
+  }
+
   if (eligible.length > 0) {
-    html += `<h3 style="margin:16px 0 8px;font-size:16px;">${t('you_may_be_eligible')}</h3>`;
+    html += `<h3 class="results-section-title">${t('you_may_be_eligible')}</h3>`;
     eligible.forEach(r => { html += schemeCard(r, true); });
   }
 
+  if (moreInfo.length > 0) {
+    html += `<h3 class="results-section-title">${t('more_info_needed')}</h3>`;
+    moreInfo.forEach(r => { html += schemeCard(r, false); });
+  }
+
   if (notEligible.length > 0) {
-    html += `<h3 style="margin:24px 0 8px;font-size:16px;color:var(--text-secondary)">${t('not_eligible_count')}</h3>`;
+    html += `<h3 class="results-section-title">${t('not_eligible_count')}</h3>`;
     notEligible.forEach(r => { html += schemeCard(r, false); });
+  }
+
+  if (eligible.length === 0 && moreInfo.length === 0 && notEligible.length === 0) {
+    html += noDeadEndHint();
+  } else if (eligible.length === 0 && moreInfo.length === 0) {
+    html += `<div class="hint-box">${t('all_eligible_empty')}</div>`;
   }
 
   list.innerHTML = html;
 }
 
-function schemeCard(result, isEligible) {
+// No dead-end: always give the user a next step
+function noDeadEndHint() {
+  return `
+    <div class="hint-box" role="note">
+      ${t('no_eligible_hint')}
+      <button class="btn btn-ghost btn-full hint-btn" onclick="showScreen('screen-profile'); submitProfile();">${t('check_this_scheme')}</button>
+    </div>`;
+}
+
+function schemeCard(result, highlight) {
   const s = result.scheme;
+  const status = result.status || (result.eligible ? 'eligible' : 'not_eligible');
   const catIcons = {
     kisan: '🌾', vidyarthi: '📚', rojgar: '💼', mahila: '👩',
     swasthya: '🏥', ghar: '🏠', arthik_madad: '💰'
   };
   const icon = catIcons[s.category] || '📋';
-  const badgeClass = result.matchLevel === 'likely_eligible' ? 'eligible' :
-    result.matchLevel === 'possibly_eligible' ? 'check' : isEligible ? 'eligible' : 'not-eligible';
-  const badgeText = isEligible ? t('eligible') : t('not_eligible');
+
+  let badgeClass = 'not-eligible';
+  let badgeText = t('not_eligible');
+  if (status === 'eligible') { badgeClass = 'eligible'; badgeText = t('eligible'); }
+  else if (status === 'more_info_needed') { badgeClass = 'check'; badgeText = t('more_info_needed'); }
+
+  const cardClass = status === 'eligible' ? 'scheme-card eligible-card'
+    : status === 'more_info_needed' ? 'scheme-card more-info-card'
+    : 'scheme-card not-eligible-card';
 
   let docsHtml = '';
   if (s.requiredDocuments && s.requiredDocuments.length > 0) {
@@ -360,35 +648,125 @@ function schemeCard(result, isEligible) {
       </div>`;
   }
 
+  const reasons = (result.reasons && result.reasons.length) ? result.reasons.join('. ') : '';
+  let extraHtml = '';
+  if (status === 'more_info_needed') {
+    const miss = result.missingFields || [];
+    const reqDocMiss = result.requiredEvidenceMissing || [];
+    if (miss.length || reqDocMiss.length) {
+      extraHtml += `<div class="scheme-reason info">${t('missing_info')} ${miss.map(m => fieldLabel(m.field)).join(', ')}${reqDocMiss.length ? (miss.length ? ', ' : '') + reqDocMiss.join(', ') : ''}</div>`;
+    }
+    if (result.conflicts && result.conflicts.length) {
+      extraHtml += `<div class="scheme-reason conflict">${t('verify_conflict')}</div>`;
+    }
+  } else if (status === 'not_eligible' && reasons) {
+    extraHtml += `<div class="scheme-reason">${reasons}</div>`;
+  }
+
+  const evidenceHtml = (result.evidenceUsed && result.evidenceUsed.length > 0)
+    ? `<div class="scheme-evidence">${t('evidence_used')}: ${result.evidenceUsed.map(e => fieldLabel(e.field) + ' (' + sourceLabel(e.source) + ')').join(', ')}</div>`
+    : '';
+
+  const eligibilityHtml = s.eligibilityRules && s.eligibilityRules.conditions && s.eligibilityRules.conditions.length
+    ? `<div class="scheme-eligibility"><span>${t('eligibility_summary')}:</span> ${s.eligibilityRules.conditions.join('; ')}</div>`
+    : '';
+
+  const govLabel = `<span class="gov-source">🛡️ ${t('official_gov_source')} · ${t('last_verified')}: ${s.lastVerified}</span>`;
+
   return `
-    <div class="scheme-card ${isEligible ? 'eligible-card' : 'not-eligible-card'}">
+    <div class="${cardClass}">
       <div class="scheme-header">
         <div class="scheme-name">${icon} ${s.name}</div>
         <span class="scheme-badge ${badgeClass}">${badgeText}</span>
       </div>
       <div class="scheme-benefit">${t('benefit')}: ${s.benefit}</div>
       <div class="scheme-desc">${s.shortDescription}</div>
-      ${result.reasons.length > 0 ? `<div class="scheme-reason">${result.reasons.join('. ')}</div>` : ''}
+      ${eligibilityHtml}
+      ${extraHtml}
+      ${evidenceHtml}
       <div class="scheme-meta">
-        <span>${t('source')}: <a href="${s.officialSourceUrl}" target="_blank" rel="noopener">${s.officialSourceUrl}</a></span>
-        <span>${t('last_verified')}: ${s.lastVerified}</span>
+        ${govLabel}
+        <span>${t('source')}: <a href="${s.officialSourceUrl}" target="_blank" rel="noopener" onclick="return handleOfficialLink(event, '${s.officialSourceUrl}', '${s.officialApplicationUrl}')">${s.officialSourceUrl}</a></span>
       </div>
       ${docsHtml}
       <div class="scheme-actions">
-        ${isEligible ? `<a href="${s.officialApplicationUrl}" target="_blank" rel="noopener" class="btn-apply">${t('aavedan_karein')} ↗</a>` : ''}
-        <a href="${s.officialSourceUrl}" target="_blank" rel="noopener" class="btn-source">${t('view_source')} ↗</a>
+        ${status === 'eligible' ? `<a href="${s.officialApplicationUrl}" target="_blank" rel="noopener" class="btn-apply" onclick="return handleOfficialLink(event, '${s.officialApplicationUrl}', '${s.officialSourceUrl}')">${t('aavedan_karein')} ↗</a>` : ''}
+        <a href="${s.officialSourceUrl}" target="_blank" rel="noopener" class="btn-source" onclick="return handleOfficialLink(event, '${s.officialSourceUrl}', '${s.officialApplicationUrl}')">${t('view_source')} ↗</a>
       </div>
     </div>`;
 }
 
+function alternativeCard(a) {
+  const govLabel = a.officialSourceUrl ? `<span class="gov-source">🛡️ ${t('official_gov_source')} · ${t('last_verified')}: ${a.lastVerified || '—'}</span>` : '';
+  return `
+    <div class="scheme-card eligible-card alt-card">
+      <div class="scheme-header">
+        <div class="scheme-name">${a.name}</div>
+        <span class="scheme-badge eligible">${t('eligible')}</span>
+      </div>
+      <div class="scheme-benefit">${t('benefit')}: ${a.benefit}</div>
+      ${a.eligibilityRules && a.eligibilityRules.conditions && a.eligibilityRules.conditions.length ? `<div class="scheme-eligibility"><span>${t('eligibility_summary')}:</span> ${a.eligibilityRules.conditions.join('; ')}</div>` : ''}
+      ${a.evidenceUsed && a.evidenceUsed.length ? `<div class="scheme-evidence">${t('evidence_used')}: ${a.evidenceUsed.map(e => fieldLabel(e.field) + ' (' + sourceLabel(e.source) + ')').join(', ')}</div>` : ''}
+      ${govLabel ? `<div class="scheme-meta">${govLabel}</div>` : ''}
+      <div class="scheme-actions">
+        <a href="${a.officialApplicationUrl}" target="_blank" rel="noopener" class="btn-apply" onclick="return handleOfficialLink(event, '${a.officialApplicationUrl}', '${a.officialSourceUrl || a.officialApplicationUrl}')">${t('aavedan_karein')} ↗</a>
+      </div>
+    </div>`;
+}
+
+// Graceful handling of official external links: probe availability asynchronously,
+// show a friendly toast if the official site appears unavailable, and offer the fallback source link.
+function handleOfficialLink(event, url, fallbackUrl) {
+  if (!url) return true;
+  const link = event && event.currentTarget;
+  fetch(url, { method: 'HEAD', mode: 'no-cors' })
+    .then(() => {})
+    .catch(() => {
+      showToast(t('link_failed'));
+      if (fallbackUrl && fallbackUrl !== url && link) {
+        link.setAttribute('href', fallbackUrl);
+        link.textContent = (link.textContent || '').replace('↗', '') + ' ↗';
+      }
+    });
+  return true;
+}
+
+function fieldLabel(f) {
+  const labels = { age: t('age'), gender: t('gender'), occupation: t('occupation'), income: t('income'), category: t('category'), state: t('state') };
+  return labels[f] || f;
+}
+
+function sourceLabel(s) {
+  const labels = { user: 'Form/Voice', document: t('documents'), conflict: 'Verification needed' };
+  return labels[s] || s;
+}
+
 // All schemes
 async function loadAllSchemes() {
+  const list = document.getElementById('schemesList');
+  if (list) {
+    list.innerHTML = `
+      <div class="loading-state" role="status" aria-live="polite">
+        <div class="spinner"></div>
+        <div>${t('processing_msg')}</div>
+      </div>`;
+  }
   try {
     const res = await fetch('/api/schemes');
+    if (!res.ok) throw new Error('schemes_fetch_failed');
     allSchemesData = await res.json();
+    if (!Array.isArray(allSchemesData)) throw new Error('schemes_invalid');
     renderSchemesList(allSchemesData);
   } catch (err) {
-    showToast(t('kuch_dikkat'));
+    if (list) {
+      list.innerHTML = `
+        <div class="empty-state" role="alert">
+          <div class="empty-icon">⚠️</div>
+          <div class="empty-text">${t('kuch_dikkat')}</div>
+        </div>`;
+    } else {
+      showToast(t('kuch_dikkat'));
+    }
   }
 }
 
@@ -461,9 +839,10 @@ function showSchemeDetail(id) {
       </div>
       <div class="scheme-benefit">${t('benefit')}: ${scheme.benefit}</div>
       <div class="scheme-desc">${scheme.shortDescription}</div>
+      ${scheme.eligibilityRules && scheme.eligibilityRules.conditions && scheme.eligibilityRules.conditions.length ? `<div class="scheme-eligibility"><span>${t('eligibility_summary')}:</span> ${scheme.eligibilityRules.conditions.join('; ')}</div>` : ''}
       <div class="scheme-meta">
-        <span>${t('source')}: <a href="${scheme.officialSourceUrl}" target="_blank" rel="noopener">${scheme.officialSourceUrl}</a></span>
-        <span>${t('last_verified')}: ${scheme.lastVerified}</span>
+        <span class="gov-source">🛡️ ${t('official_gov_source')} · ${t('last_verified')}: ${scheme.lastVerified}</span>
+        <span>${t('source')}: <a href="${scheme.officialSourceUrl}" target="_blank" rel="noopener" onclick="return handleOfficialLink(event, '${scheme.officialSourceUrl}', '${scheme.officialApplicationUrl}')">${scheme.officialSourceUrl}</a></span>
       </div>
       ${scheme.requiredDocuments.length > 0 ? `
         <div class="scheme-docs">
@@ -471,10 +850,17 @@ function showSchemeDetail(id) {
           <div class="scheme-docs-list">${scheme.requiredDocuments.join(', ')}</div>
         </div>` : ''}
       <div class="scheme-actions">
-        <a href="${scheme.officialApplicationUrl}" target="_blank" rel="noopener" class="btn-apply">${t('aavedan_karein')} ↗</a>
-        <a href="${scheme.officialSourceUrl}" target="_blank" rel="noopener" class="btn-source">${t('view_source')} ↗</a>
+        <a href="${scheme.officialApplicationUrl}" target="_blank" rel="noopener" class="btn-apply" onclick="return handleOfficialLink(event, '${scheme.officialApplicationUrl}', '${scheme.officialSourceUrl}')">${t('aavedan_karein')} ↗</a>
+        <a href="${scheme.officialSourceUrl}" target="_blank" rel="noopener" class="btn-source" onclick="return handleOfficialLink(event, '${scheme.officialSourceUrl}', '${scheme.officialApplicationUrl}')">${t('view_source')} ↗</a>
+        <button onclick="checkThisScheme('${scheme.id}')" class="btn-apply" style="margin-top:8px;width:100%;">${t('check_this_scheme')}</button>
       </div>
     </div>`;
+}
+
+function checkThisScheme(id) {
+  requestedSchemeId = id;
+  showScreen('screen-home');
+  setTimeout(() => submitProfile(), 50);
 }
 
 // Toast
@@ -487,18 +873,3 @@ function showToast(msg) {
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 3000);
 }
-
-// Drag and drop
-document.addEventListener('DOMContentLoaded', () => {
-  const zone = document.getElementById('uploadZone');
-  if (!zone) return;
-  zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor = 'var(--primary)'; });
-  zone.addEventListener('dragleave', () => { zone.style.borderColor = ''; });
-  zone.addEventListener('drop', e => {
-    e.preventDefault();
-    zone.style.borderColor = '';
-    const input = document.getElementById('fileInput');
-    input.files = e.dataTransfer.files;
-    handleFileUpload(input);
-  });
-});

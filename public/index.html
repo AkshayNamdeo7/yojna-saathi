@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Yojna Saathi</title>
   <meta name="description" content="Aapki zaroorat, aapki yojna - AI-powered government scheme eligibility checker">
+  <script>
+    (function () {
+      var theme = 'light';
+      try {
+        theme = localStorage.getItem('yojna_theme') || 'light';
+      } catch (e) {}
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>">
   <link rel="stylesheet" href="/css/styles.css">
 </head>
@@ -31,8 +40,9 @@
           <span class="header-title">Yojna Saathi</span>
         </div>
         <div class="header-right">
-          <button class="icon-btn" id="langBtn" title="Language">🌐</button>
-          <button class="icon-btn" id="themeBtn" title="Theme">🌙</button>
+          <button class="icon-btn" id="langBtn" type="button" onclick="openLangModal()" aria-label="Language" title="Language">🌐</button>
+          <button class="icon-btn" id="themeBtn" type="button" onclick="toggleTheme()" aria-label="Theme" title="Theme">🌙</button>
+          <button class="login-btn" data-login type="button">लॉगिन</button>
         </div>
       </header>
       <div class="container">
@@ -50,7 +60,7 @@
             <div class="action-icon">✅</div>
             <div class="action-label" data-i18n="patrata_janchen">Meri patrata jaanchen</div>
           </button>
-          <button class="action-card" onclick="startVoiceInput()">
+          <button class="action-card" onclick="openVoice()">
             <div class="action-icon">🎤</div>
             <div class="action-label" data-i18n="bolkar_poochhen">Bolkar poochhen</div>
           </button>
@@ -98,8 +108,9 @@
           <span class="header-title" data-i18n="fill_details">Apni jankari bharen</span>
         </div>
         <div class="header-right">
-          <button class="icon-btn" id="langBtn2" onclick="showScreen('screen-language')">🌐</button>
-          <button class="icon-btn" id="themeBtn2" onclick="toggleTheme()">🌙</button>
+          <button class="icon-btn" id="langBtn2" type="button" onclick="openLangModal()" aria-label="Language">🌐</button>
+          <button class="icon-btn" id="themeBtn2" type="button" onclick="toggleTheme()" aria-label="Theme" title="Theme">🌙</button>
+          <button class="login-btn" data-login type="button">लॉगिन</button>
         </div>
       </header>
       <div class="container">
@@ -169,28 +180,28 @@
 
           <div class="form-group">
             <label data-i18n="optional_docs">Dastavez joden (vaikalpik)</label>
-            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
-              <input type="file" id="fileInput" multiple accept="image/*,.pdf" style="display:none" onchange="handleFileUpload(this)">
-              <div class="upload-icon">📄</div>
-              <p data-i18n="upload_doc">Yahan click karein ya drag karein</p>
+            <div class="doc-zone" id="docZone" onclick="openDocModal()" role="button" tabindex="0"
+                 onkeydown="if(event.key==='Enter'||event.key===' ')event.preventDefault(),openDocModal()"
+                 aria-label="Add document">
+              <div class="doc-zone-icon">📄</div>
+              <p data-i18n="add_document">दस्तावेज़ जोड़ें</p>
+              <p class="doc-zone-hint" data-i18n="documents_optional">दस्तावेज़ जोड़ना वैकल्पिक है</p>
             </div>
-            <div class="upload-actions">
-              <button type="button" class="upload-action" onclick="document.getElementById('fileInputGallery').click()">
-                <span>📁</span><span data-i18n="gallery">Gallery se chunein</span>
-              </button>
-              <input type="file" id="fileInputGallery" multiple accept="image/*,.pdf" style="display:none" onchange="handleFileUpload(this)">
-              <button type="button" class="upload-action ghost" onclick="document.getElementById('fileInputCamera').click()">
-                <span>📷</span><span data-i18n="camera">Camera se kheenche</span>
-              </button>
-              <input type="file" id="fileInputCamera" accept="image/*" capture="environment" style="display:none" onchange="handleFileUpload(this)">
-            </div>
-            <div id="uploadedFiles" class="uploaded-files"></div>
+            <div id="uploadedFiles" class="uploaded-files" data-doc-list></div>
+            <button type="button" class="btn btn-ghost btn-full doc-skip" onclick="skipDocuments()">
+              <span data-i18n="continue_without_documents">बिना दस्तावेज़ जारी रखें</span>
+            </button>
           </div>
 
           <button type="button" class="btn btn-primary btn-full" onclick="submitProfile()">
             <span data-i18n="yojna_khojen">Mere liye yojna khojen</span>
           </button>
         </form>
+
+        <div class="search-note" id="searchNote">
+          <p data-i18n="information_for_search">आपकी जानकारी इस खोज के लिए सुरक्षित रूप से इस्तेमाल की जा रही है।</p>
+          <span class="guest-chip" id="guestChip" data-i18n="guest_mode">अतिथि मोड</span>
+        </div>
       </div>
     </section>
 
@@ -211,8 +222,9 @@
           <span class="header-title" data-i18n="sabhi_yojnayein">Aapke liye yojnae</span>
         </div>
         <div class="header-right">
-          <button class="icon-btn" onclick="showScreen('screen-language')">🌐</button>
-          <button class="icon-btn" onclick="toggleTheme()">🌙</button>
+          <button class="icon-btn" id="langBtn3" type="button" onclick="openLangModal()" aria-label="Language">🌐</button>
+          <button class="icon-btn" id="themeBtn3" type="button" onclick="toggleTheme()" aria-label="Theme">🌙</button>
+          <button class="login-btn" data-login type="button">लॉगिन</button>
         </div>
       </header>
       <div class="container">
@@ -229,8 +241,9 @@
           <span class="header-title" data-i18n="all_schemes">Sabhi Yojnayein</span>
         </div>
         <div class="header-right">
-          <button class="icon-btn" onclick="showScreen('screen-language')">🌐</button>
-          <button class="icon-btn" onclick="toggleTheme()">🌙</button>
+          <button class="icon-btn" id="langBtn4" type="button" onclick="openLangModal()" aria-label="Language">🌐</button>
+          <button class="icon-btn" id="themeBtn4" type="button" onclick="toggleTheme()" aria-label="Theme">🌙</button>
+          <button class="login-btn" data-login type="button">लॉगिन</button>
         </div>
       </header>
       <div class="container">
@@ -261,16 +274,177 @@
       <div class="modal-content" onclick="event.stopPropagation()">
         <div class="modal-header">
           <h3 data-i18n="apni_bhasha">Apni bhasha chunein</h3>
-          <button class="icon-btn" onclick="document.getElementById('langModal').style.display='none'">✕</button>
+          <button class="icon-btn" type="button" onclick="closeLangModal()" aria-label="Close">✕</button>
         </div>
         <div class="modal-body">
           <div class="language-grid modal-lang-grid" id="modalLangGrid"></div>
         </div>
       </div>
     </div>
+
+    <!-- LOGIN MODAL -->
+    <div id="loginModal" class="modal" style="display:none" onclick="closeLoginModalBackdrop(event)">
+      <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3 data-i18n="optional_login">लॉगिन वैकल्पिक है</h3>
+          <button class="icon-btn" type="button" onclick="closeLoginModal()" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="login-note" data-i18n="login_not_required">बिना लॉगिन के भी आप योजनाएँ खोज सकते हैं।</p>
+          <div id="loginStep1">
+            <div class="form-group">
+              <label for="loginMobile" data-i18n="mobile_number">मोबाइल नंबर</label>
+              <input type="tel" id="loginMobile" class="form-control" inputmode="numeric" maxlength="10" autocomplete="tel" placeholder="9876543210">
+            </div>
+            <button type="button" class="btn btn-primary btn-full" onclick="submitMobile()">
+              <span data-i18n="continue_otp">OTP के साथ जारी रखें</span>
+            </button>
+          </div>
+          <div id="loginStep2" style="display:none">
+            <p class="demo-note" data-i18n="demo_otp">डेमो मोड: OTP 123456</p>
+            <div class="form-group">
+              <label for="loginOtp" data-i18n="enter_otp">OTP दर्ज करें</label>
+              <input type="tel" id="loginOtp" class="form-control" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="123456">
+            </div>
+            <button type="button" class="btn btn-primary btn-full" onclick="verifyOtp()">
+              <span data-i18n="verify">सत्यापित करें</span>
+            </button>
+            <button type="button" class="btn btn-ghost btn-full" onclick="backToMobileStep()" style="margin-top:10px;">
+              <span data-i18n="back">वापस</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VOICE MODAL -->
+    <div id="voiceModal" class="modal" style="display:none" onclick="closeVoiceModalBackdrop(event)">
+      <div class="modal-content voice-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3 data-i18n="voice_title">Bolkar poochhen</h3>
+          <div class="voice-status" id="voiceStatus" style="display:none">
+            <span class="voice-status-dot" id="voiceStatusDot"></span>
+            <span id="voiceStatusText">Listening...</span>
+          </div>
+          <button class="icon-btn" type="button" onclick="closeVoiceModal()" aria-label="Close" title="Close">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="voice-note" data-i18n="voice_instruction">Boliye ya niche likhkare bejhein.</p>
+          <div class="voice-transcript" id="voiceTranscript" aria-live="polite"></div>
+          <div class="voice-input-row">
+            <input type="text" id="voiceTextInput" class="form-control" maxlength="300" autocomplete="off"
+                   data-i18n-placeholder="voice_placeholder" onkeydown="if(event.key==='Enter')sendVoiceText()">
+            <button type="button" class="voice-send-btn" onclick="sendVoiceText()" data-i18n="send">Bhejen</button>
+          </div>
+          <div class="voice-actions">
+            <button type="button" class="btn btn-ghost voice-action-btn" id="voiceMicToggle" onclick="toggleVoiceListening()" data-i18n="stop_listening">Sunna band karein</button>
+            <button type="button" class="btn btn-ghost voice-action-btn" onclick="openDocModal()">
+              <span data-i18n="add_document">दस्तावेज़ जोड़ें</span>
+            </button>
+            <button type="button" class="btn btn-primary voice-action-btn" onclick="fillAndSearch()" data-i18n="searching_for_schemes">Yojnayein dikhayen</button>
+            <button type="button" class="btn btn-ghost voice-action-btn" onclick="cancelVoice()" data-i18n="cancel">Radd karein</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DOCUMENT MODAL -->
+    <div id="docModal" class="modal" style="display:none" onclick="closeDocModalBackdrop(event)">
+      <div class="modal-content doc-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3 data-i18n="add_document">दस्तावेज़ जोड़ें</h3>
+          <button class="icon-btn" type="button" onclick="closeDocModal()" aria-label="Close" title="Close">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="docStepTypes">
+            <p class="doc-note" data-i18n="documents_optional">दस्तावेज़ जोड़ना वैकल्पिक है — ये आपकी जानकारी भरने में मदद करते हैं।</p>
+            <p class="doc-note-sub" data-i18n="choose_document_type">दस्तावेज़ का प्रकार चुनें</p>
+            <div class="doc-type-grid" id="docTypeGrid"></div>
+            <button type="button" class="btn btn-ghost btn-full" onclick="skipDocuments()">
+              <span data-i18n="continue_without_documents">बिना दस्तावेज़ जारी रखें</span>
+            </button>
+          </div>
+
+          <div id="docStepFile" style="display:none">
+            <p class="doc-note-sub" id="docSelectedTypeLabel"></p>
+            <div class="doc-upload-actions" id="docUploadActions">
+              <button type="button" class="doc-upload-action" onclick="document.getElementById('docFileGallery').click()">
+                <span>📁</span><span data-i18n="choose_from_gallery">गैलरी से चुनें</span>
+              </button>
+              <input type="file" id="docFileGallery" accept="image/*,.pdf" style="display:none" onchange="handleDocFile(this)">
+              <button type="button" class="doc-upload-action ghost" onclick="document.getElementById('docFileCamera').click()">
+                <span>📷</span><span data-i18n="take_photo">कैमरे से फोटो लें</span>
+              </button>
+              <input type="file" id="docFileCamera" accept="image/*" capture="environment" style="display:none" onchange="handleDocFile(this)">
+              <button type="button" class="doc-upload-action ghost" onclick="document.getElementById('docFileFallback').click()">
+                <span>🖥️</span><span data-i18n="upload_document">फ़ाइल चुनें</span>
+              </button>
+              <input type="file" id="docFileFallback" accept="image/*,.pdf" style="display:none" onchange="handleDocFile(this)">
+            </div>
+            <p class="doc-privacy" data-i18n="privacy_note">आपके दस्तावेज़ों का उपयोग केवल आपकी जानकारी समझने और योजना खोजने में किया जाता है।</p>
+            <button type="button" class="btn btn-ghost btn-full" onclick="showDocTypeStep()">
+              <span data-i18n="back_to_document_types">दस्तावेज़ का प्रकार बदलें</span>
+            </button>
+          </div>
+
+          <div id="docStepLoading" style="display:none">
+            <div class="doc-loading">
+              <div class="spinner"></div>
+              <p id="docLoadingText" data-i18n="reading_document" aria-live="polite">दस्तावेज़ पढ़ रहे हैं...</p>
+            </div>
+          </div>
+
+          <div id="docStepResult" style="display:none">
+            <div id="docMismatchList" class="doc-mismatch-list"></div>
+            <p class="doc-note demo-note" id="docDemoNote" style="display:none" data-i18n="demo_document_note">डेमो मोड में उदाहरण जानकारी दिखाई जा रही है।</p>
+            <p class="doc-result-title" id="docResultTitle" data-i18n="extracted_information">निकाली गई जानकारी</p>
+            <p class="doc-result-hint" id="docResultHint" data-i18n="please_check_information">कृपया निकाली गई जानकारी जाँच लें।</p>
+            <div id="docFields" class="doc-fields"></div>
+            <p class="doc-not-stored" id="docNotStored" style="display:none" data-i18n="doc_not_stored">सुरक्षा के लिए संवेदनशील जानकारी सहेजी नहीं जाती।</p>
+            <button type="button" class="btn btn-primary btn-full" onclick="applyDocResult()">
+              <span data-i18n="use_document_information">इस जानकारी का उपयोग करें</span>
+            </button>
+            <button type="button" class="btn btn-ghost btn-full" onclick="showDocTypeStep()">
+              <span data-i18n="add_another_document">और दस्तावेज़ जोड़ें</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROFILE MODAL -->
+    <div id="profileModal" class="modal" style="display:none" onclick="closeProfileModalBackdrop(event)">      <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3 data-i18n="profile">प्रोफ़ाइल</h3>
+          <button class="icon-btn" type="button" onclick="closeProfileModal()" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="profile-row">
+            <span class="profile-label" data-i18n="mobile_number">मोबाइल नंबर</span>
+            <span class="profile-value" id="profileMobileText">—</span>
+          </div>
+          <div class="profile-section" id="profileGuestBlock">
+            <div class="profile-section-title" data-i18n="profile_ready">आपकी प्रोफ़ाइल तैयार है</div>
+            <p class="profile-value" id="profileGuestText">—</p>
+          </div>
+          <div class="profile-section">
+            <div class="profile-section-title" data-i18n="last_search">अंतिम खोज</div>
+            <p class="profile-value" id="profileSearchText" data-i18n="no_saved_search">अभी कोई खोज सहेजी नहीं गई है।</p>
+          </div>
+          <button type="button" class="btn btn-logout btn-full" onclick="logout()">
+            <span data-i18n="logout">लॉग आउट</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
+
+  <button id="voiceQuickBtn" class="voice-quick-btn" style="display:none" type="button"
+          onclick="openVoice()" aria-label="Speak to search" title="Speak to search">🎤</button>
 
   <script src="/js/i18n.js"></script>
   <script src="/js/app.js"></script>
+  <script src="/js/voice.js"></script>
+  <script src="/js/documents.js"></script>
 </body>
 </html>

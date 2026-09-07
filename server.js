@@ -25,7 +25,7 @@ const schemes = require('./data/schemes');
 const { i18n } = require('./data/translations');
 const { checkEligibility } = require('./services/eligibilityEngine');
 const { processDocument } = require('./services/ocrService');
-const { processVoice } = require('./services/aiService');
+const { parseVoiceIntent, callAiAssistant } = require('./services/aiService');
 
 app.get('/api/translations/:lang', (req, res) => {
   const lang = req.params.lang;
@@ -55,15 +55,18 @@ app.get('/api/schemes/:id', (req, res) => {
 });
 
 app.post('/api/eligibility', (req, res) => {
-  const profile = req.body;
-  const results = checkEligibility(profile, schemes);
-  res.json(results);
+  const profile = req.body || {};
+  const requestedId = String(profile.requestedId || '');
+  const { requestedId: _drop, ...cleanProfile } = profile;
+  const payload = checkEligibility(cleanProfile, schemes, { requestedId });
+  res.json(payload);
 });
 
 app.post('/api/upload', upload.single('document'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  const documentType = (req.body && String(req.body.documentType || '').trim()) || 'other';
   try {
-    const extracted = await processDocument(req.file);
+    const extracted = await processDocument(req.file, documentType);
     res.json(extracted);
   } catch (err) {
     res.status(500).json({ error: 'Document processing unavailable', fallback: true });
@@ -74,8 +77,32 @@ app.post('/api/voice', async (req, res) => {
   const { text } = req.body;
   if (!text) return res.status(400).json({ error: 'No text provided' });
   try {
-    const profile = await processVoice(text);
-    res.json(profile);
+    const result = await parseVoiceIntent(String(text), 'hi', null);
+    res.json(result.profile);
+  } catch (err) {
+    res.status(500).json({ error: 'Voice processing unavailable', fallback: true });
+  }
+});
+
+app.post('/api/voice/intent', async (req, res) => {
+  const { text, language, known } = req.body || {};
+  if (!text) return res.status(400).json({ error: 'No text provided' });
+  try {
+    const result = await parseVoiceIntent(String(text), language || 'hi', known || null);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: 'Voice processing unavailable', fallback: true });
+  }
+});
+
+app.post('/api/voice/answer', async (req, res) => {
+  const { text, language, known } = req.body || {};
+  if (!text) return res.status(400).json({ error: 'No text provided' });
+  try {
+    const ai = await callAiAssistant(String(text), { language: language || 'hi', known: known || null });
+    if (ai) return res.json({ ...ai, ai: true });
+    const result = await parseVoiceIntent(String(text), language || 'hi', known || null);
+    res.json({ ...result, demo: true });
   } catch (err) {
     res.status(500).json({ error: 'Voice processing unavailable', fallback: true });
   }
