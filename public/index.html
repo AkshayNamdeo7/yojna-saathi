@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yojna Saathi</title>
+  <meta name="description" content="Aapki zaroorat, aapki yojna - AI-powered government scheme eligibility checker">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏛️</text></svg>">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- LANGUAGE SELECTOR SCREEN -->
+    <section id="screen-language" class="screen active">
+      <div class="container language-container">
+        <div class="logo-area">
+          <div class="logo-icon">🏛️</div>
+          <h1 class="brand-name">Yojna Saathi</h1>
+          <p class="brand-tagline" data-i18n="tagline">Aapki zaroorat, aapki yojna</p>
+        </div>
+        <h2 class="section-title" data-i18n="apni_bhasha">Apni bhasha chunein</h2>
+        <div class="language-grid" id="languageGrid"></div>
+      </div>
+    </section>
+
+    <!-- HOME SCREEN -->
+    <section id="screen-home" class="screen">
+      <header class="header">
+        <div class="header-left">
+          <span class="header-logo">🏛️</span>
+          <span class="header-title">Yojna Saathi</span>
+        </div>
+        <div class="header-right">
+          <button class="icon-btn" id="langBtn" title="Language">🌐</button>
+          <button class="icon-btn" id="themeBtn" title="Theme">🌙</button>
+        </div>
+      </header>
+      <div class="container">
+        <div class="hero">
+          <h1 class="hero-title" data-i18n="aapko_kis">Aapko kis sarkari madad ki zaroorat hai?</h1>
+          <p class="hero-subtitle" data-i18n="tagline">Aapki zaroorat, aapki yojna</p>
+        </div>
+
+        <div class="action-cards">
+          <button class="action-card primary" onclick="showScreen('screen-profile')">
+            <div class="action-icon">🔍</div>
+            <div class="action-label" data-i18n="yojna_khojen">Mere liye yojna khojen</div>
+          </button>
+          <button class="action-card" onclick="showScreen('screen-profile')">
+            <div class="action-icon">✅</div>
+            <div class="action-label" data-i18n="patrata_janchen">Meri patrata jaanchen</div>
+          </button>
+          <button class="action-card" onclick="startVoiceInput()">
+            <div class="action-icon">🎤</div>
+            <div class="action-label" data-i18n="bolkar_poochhen">Bolkar poochhen</div>
+          </button>
+          <button class="action-card" onclick="showScreen('screen-schemes')">
+            <div class="action-icon">📋</div>
+            <div class="action-label" data-i18n="sabhi_yojnayein">Sabhi yojnayein dekhen</div>
+          </button>
+        </div>
+
+        <h3 class="category-title" data-i18n="fill_details">Apni shreni chunein</h3>
+        <div class="category-grid">
+          <button class="category-chip" data-category="kisan" onclick="quickCategory('kisan')">
+            <span>🌾</span><span data-i18n="kisan">Kisan</span>
+          </button>
+          <button class="category-chip" data-category="vidyarthi" onclick="quickCategory('vidyarthi')">
+            <span>📚</span><span data-i18n="vidyarthi">Vidyarthi</span>
+          </button>
+          <button class="category-chip" data-category="rojgar" onclick="quickCategory('rojgar')">
+            <span>💼</span><span data-i18n="rojgar">Rojgar</span>
+          </button>
+          <button class="category-chip" data-category="mahila" onclick="quickCategory('mahila')">
+            <span>👩</span><span data-i18n="mahila">Mahila</span>
+          </button>
+          <button class="category-chip" data-category="swasthya" onclick="quickCategory('swasthya')">
+            <span>🏥</span><span data-i18n="swasthya">Swasthya</span>
+          </button>
+          <button class="category-chip" data-category="ghar" onclick="quickCategory('ghar')">
+            <span>🏠</span><span data-i18n="ghar">Ghar</span>
+          </button>
+          <button class="category-chip" data-category="arthik_madad" onclick="quickCategory('arthik_madad')">
+            <span>💰</span><span data-i18n="arthik_madad">Arthik Madad</span>
+          </button>
+        </div>
+      </div>
+      <div class="disclaimer-bar">
+        <p data-i18n="disclaimer">Yeh aadharit sarkari website nahi hai. Hum yojnaon ki khoj mein madad karte hain.</p>
+      </div>
+    </section>
+
+    <!-- PROFILE SCREEN -->
+    <section id="screen-profile" class="screen">
+      <header class="header">
+        <div class="header-left">
+          <button class="icon-btn" onclick="showScreen('screen-home')">⬅️</button>
+          <span class="header-title" data-i18n="fill_details">Apni jankari bharen</span>
+        </div>
+        <div class="header-right">
+          <button class="icon-btn" id="langBtn2" onclick="showScreen('screen-language')">🌐</button>
+          <button class="icon-btn" id="themeBtn2" onclick="toggleTheme()">🌙</button>
+        </div>
+      </header>
+      <div class="container">
+        <!-- Voice Input Banner -->
+        <div class="voice-banner" id="voiceBanner" onclick="startVoiceInput()" style="display:none">
+          <span>🎤</span>
+          <span data-i18n="voice_input">Bolkar bharen</span>
+        </div>
+
+        <form id="profileForm" class="form-card" onsubmit="return false;">
+          <div class="form-group">
+            <label data-i18n="year_of_birth">Janm varsh</label>
+            <select id="profileAge" class="form-control">
+              <option value="">—</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label data-i18n="gender">Ling</label>
+            <div class="radio-group">
+              <label class="radio-card"><input type="radio" name="gender" value="male"><span data-i18n="male">Purush</span></label>
+              <label class="radio-card"><input type="radio" name="gender" value="female"><span data-i18n="female">Mahila</span></label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label data-i18n="state">Rajya</label>
+            <select id="profileState" class="form-control"><option value="">—</option></select>
+          </div>
+          <div class="form-group">
+            <label data-i18n="occupation">Vyavsay</label>
+            <select id="profileOccupation" class="form-control">
+              <option value="">—</option>
+              <option value="kisan">Kisan</option>
+              <option value="student">Vidyarthi</option>
+              <option value="naukri">Naukri</option>
+              <option value="vyavasaya">Vyavasaya</option>
+              <option value="mazdoor">Mazdoor</option>
+              <option value="retired">Retired</option>
+              <option value="other">Anya</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label data-i18n="income">Vaarsik Aay</label>
+            <select id="profileIncome" class="form-control">
+              <option value="">—</option>
+              <option value="100000">₹1 Lakh se kam</option>
+              <option value="200000">₹1-2 Lakh</option>
+              <option value="300000">₹2-3 Lakh</option>
+              <option value="500000">₹3-5 Lakh</option>
+              <option value="800000">₹5-8 Lakh</option>
+              <option value="1000000">₹8-10 Lakh</option>
+              <option value="2000000">₹10-20 Lakh</option>
+              <option value="5000000">₹20-50 Lakh</option>
+              <option value="10000000">₹50 Lakh se zyada</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label data-i18n="category">Shreni</label>
+            <select id="profileCategory" class="form-control">
+              <option value="">—</option>
+              <option value="general">General</option>
+              <option value="obc">OBC</option>
+              <option value="sc">SC</option>
+              <option value="st">ST</option>
+              <option value="ews">EWS</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label data-i18n="optional_docs">Dastavez joden (vaikalpik)</label>
+            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+              <input type="file" id="fileInput" multiple accept="image/*,.pdf" style="display:none" onchange="handleFileUpload(this)">
+              <div class="upload-icon">📄</div>
+              <p data-i18n="upload_doc">Yahan click karein ya drag karein</p>
+            </div>
+            <div id="uploadedFiles" class="uploaded-files"></div>
+          </div>
+
+          <button type="button" class="btn btn-primary btn-full" onclick="submitProfile()">
+            <span data-i18n="yojna_khojen">Mere liye yojna khojen</span>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- PROCESSING SCREEN -->
+    <section id="screen-processing" class="screen">
+      <div class="container processing-container">
+        <div class="spinner"></div>
+        <h2 data-i18n="processing">Prakriya ho rahi hai...</h2>
+        <p class="processing-sub">Aapke liye best yojnae dhundh rahe hain</p>
+      </div>
+    </section>
+
+    <!-- RESULTS SCREEN -->
+    <section id="screen-results" class="screen">
+      <header class="header">
+        <div class="header-left">
+          <button class="icon-btn" onclick="showScreen('screen-home')">⬅️</button>
+          <span class="header-title" data-i18n="sabhi_yojnayein">Aapke liye yojnae</span>
+        </div>
+        <div class="header-right">
+          <button class="icon-btn" onclick="showScreen('screen-language')">🌐</button>
+          <button class="icon-btn" onclick="toggleTheme()">🌙</button>
+        </div>
+      </header>
+      <div class="container">
+        <div id="resultsSummary" class="results-summary"></div>
+        <div id="resultsList" class="results-list"></div>
+      </div>
+    </section>
+
+    <!-- ALL SCHEMES SCREEN -->
+    <section id="screen-schemes" class="screen">
+      <header class="header">
+        <div class="header-left">
+          <button class="icon-btn" onclick="showScreen('screen-home')">⬅️</button>
+          <span class="header-title" data-i18n="all_schemes">Sabhi Yojnayein</span>
+        </div>
+        <div class="header-right">
+          <button class="icon-btn" onclick="showScreen('screen-language')">🌐</button>
+          <button class="icon-btn" onclick="toggleTheme()">🌙</button>
+        </div>
+      </header>
+      <div class="container">
+        <div class="search-bar">
+          <input type="text" id="schemeSearch" class="form-control" data-i18n-placeholder="search_placeholder" placeholder="Yojna khojen..." oninput="filterSchemes()">
+        </div>
+        <div class="filter-row">
+          <select id="filterCategory" class="form-control-sm" onchange="filterSchemes()">
+            <option value="">Sabhi Shreni</option>
+            <option value="kisan">Kisan</option>
+            <option value="vidyarthi">Vidyarthi</option>
+            <option value="rojgar">Rojgar</option>
+            <option value="mahila">Mahila</option>
+            <option value="swasthya">Swasthya</option>
+            <option value="ghar">Ghar</option>
+            <option value="arthik_madad">Arthik Madad</option>
+          </select>
+          <select id="filterState" class="form-control-sm" onchange="filterSchemes()">
+            <option value="">Sabhi Rajya</option>
+          </select>
+        </div>
+        <div id="schemesList" class="schemes-list"></div>
+      </div>
+    </section>
+
+    <!-- LANGUAGE MODAL -->
+    <div id="langModal" class="modal" style="display:none" onclick="closeModal(event)">
+      <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3 data-i18n="apni_bhasha">Apni bhasha chunein</h3>
+          <button class="icon-btn" onclick="document.getElementById('langModal').style.display='none'">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="language-grid modal-lang-grid" id="modalLangGrid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/i18n.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
